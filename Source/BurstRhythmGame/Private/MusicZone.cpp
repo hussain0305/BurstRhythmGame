@@ -17,6 +17,7 @@
 
 AMusicZone::AMusicZone()
 {
+    //Setting up the actor's hierarchy in C++
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bStartWithTickEnabled = true;
 
@@ -39,8 +40,9 @@ void AMusicZone::BeginPlay()
 
     if (Trigger)
     {
+        //These are the callbacks for the player entering the zone's volume. OnTriggerBegin is executed when the player enters, OnTriggerEnd is executed when they leave
         Trigger->OnComponentBeginOverlap.AddDynamic(this, &AMusicZone::OnTriggerBegin);
-        Trigger->OnComponentEndOverlap  .AddDynamic(this, &AMusicZone::OnTriggerEnd);
+        Trigger->OnComponentEndOverlap.AddDynamic(this, &AMusicZone::OnTriggerEnd);
     }
 
     BindInput();
@@ -48,6 +50,7 @@ void AMusicZone::BeginPlay()
 
 void AMusicZone::BindInput()
 {
+    //Just for binding the input
     if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
     {
         EnableInput(PC);
@@ -66,6 +69,8 @@ void AMusicZone::OnTriggerBegin(UPrimitiveComponent* /*OverlappedComp*/, AActor*
     if (!Other || Other == this) return;
     if (!Other->IsA(APawn::StaticClass())) return;
 
+    //When the player enters any zone, the zone registers itself to the player. The idea was to make it scalable. This way, we can place as many zones as we want in the level
+    //and the player's HUD will always display the correct info based on the current zone they are in
     BindSelfToHUD();
     
     if (GetWorld()->GetTimerManager().IsTimerActive(FileAskDelayHandle) || bSongStarted || bAnalyzing)
@@ -85,9 +90,10 @@ void AMusicZone::OnTriggerEnd(UPrimitiveComponent* /*OverlappedComp*/, AActor* O
 
     GetWorld()->GetTimerManager().ClearTimer(FileAskDelayHandle);
 
-    
+    //The session has ended and the activity has either been completed or abandoned. Reset everything
     StopAndReset();
 
+    //When the player exits a zone, the references are removed so the player doesn't show stale activity on their HUD
     UnbindSelfFromHUD();
 }
 
@@ -98,6 +104,7 @@ void AMusicZone::StartZoneSession()
 
 void AMusicZone::AskForFile()
 {
+    //Logic to open the Windows prompt and ask for a file
 #if WITH_EDITOR
     IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
     if (!DesktopPlatform)
@@ -132,6 +139,8 @@ void AMusicZone::AskForFile()
 
 void AMusicZone::LoadAndDecodeAudio(const FString& FilePath)
 {
+    //We maintain a TFuture for asynchoronous tasks. We're essentially running 2 parallel layers.
+    //We offload the decoding of the audio to another thread and when the result is finished, we retrieve the result
     if (AnalysisFuture.IsValid())
     {
         bAnalyzing = false;
@@ -139,6 +148,7 @@ void AMusicZone::LoadAndDecodeAudio(const FString& FilePath)
         AnalysisFuture = TFuture<void>();
     }
 
+    //THis here is for decoding the audio, it uses the third party decoders, which I then process into raw data that can be used for visualizing
     bool bOk = false;
     if (FilePath.EndsWith(TEXT(".wav"), ESearchCase::IgnoreCase))
         bOk = DecodeWav(FilePath);
@@ -164,15 +174,17 @@ void AMusicZone::LoadAndDecodeAudio(const FString& FilePath)
 
 void AMusicZone::InitDrumFilters()
 {
+    //This is to filter and recognize drums and snares from the audio file
     KickBP.SetBandPass((float)SampleRate, KickCenterHz,  KickQ);
     SnareBP.SetBandPass((float)SampleRate, SnareCenterHz, SnareQ);
     PrevKickEnergy = PrevSnareEnergy = 0.0f;
-    LastKickTime   = LastSnareTime   = -1000.0;
+    LastKickTime = LastSnareTime = -1000.0;
     bFiltersInited = true;
 }
 
 bool AMusicZone::DecodeWav(const FString& FilePath)
 {
+    //FullPCM is the in-memory copy of the entire track uploaded as mono PCM floats. So basically it is a float representing the audio data of that particular instance
     TArray<uint8> FileData;
     if (!FFileHelper::LoadFileToArray(FileData, *FilePath))
         return false;
@@ -213,8 +225,8 @@ bool AMusicZone::DecodeMp3(const FString& FilePath)
     if (mp3dec_ex_open(&MP3, TCHAR_TO_ANSI(*FilePath), MP3D_SEEK_TO_SAMPLE))
         return false;
 
-    SampleRate         = (int32)MP3.info.hz;
-    const int32 Channels     = (int32)MP3.info.channels;
+    SampleRate = (int32)MP3.info.hz;
+    const int32 Channels = (int32)MP3.info.channels;
     const int64 TotalSamples = (int64)MP3.samples;
 
     TArray<mp3d_sample_t> PCM16;
@@ -254,17 +266,20 @@ USoundWaveProcedural* AMusicZone::CreateProceduralFromPCM(const TArray<float>& P
     PCM16.SetNumUninitialized(PCM.Num());
     for (int32 i = 0; i < PCM.Num(); ++i)
     {
+        //This is for safety to keep the values within normal range
         float v = FMath::Clamp(PCM[i], -1.0f, 1.0f);
         PCM16[i] = (int16)FMath::RoundToInt(v * 32767.0f);
     }
 
+    //Create a procedural sound and tell it what values we're about to feed to it
     USoundWaveProcedural* SW = NewObject<USoundWaveProcedural>(this);
     SW->SetSampleRate(InSampleRate);
     SW->NumChannels = 1;
-    SW->Duration    = (float)PCM.Num() / (float)InSampleRate;
-    SW->SoundGroup  = ESoundGroup::SOUNDGROUP_Default;
-    SW->bLooping    = false;
+    SW->Duration = (float)PCM.Num() / (float)InSampleRate;
+    SW->SoundGroup = ESoundGroup::SOUNDGROUP_Default;
+    SW->bLooping = false;
 
+    //Push the raw bytes of the int16 buffer into the sound's queue so it can play immediately
     SW->QueueAudio(reinterpret_cast<const uint8*>(PCM16.GetData()), PCM16.Num() * sizeof(int16));
     return SW;
 }

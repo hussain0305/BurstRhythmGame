@@ -12,9 +12,11 @@ class BURSTRHYTHMGAME_API ANoteActor : public AActor
 public:
 	ANoteActor();
 
+	//Each node stores the time of its impact so animations can be handled locally
 	UFUNCTION(BlueprintCallable, Category="Note")
 	void SetImpactTime(double InImpactTime) { ImpactTime = InImpactTime; }
 
+	//This handles the scale and how long we want the animation to be
 	UFUNCTION(BlueprintCallable, Category="Note")
 	void SetEmphasisParams(float InHalfWindowSeconds, float InPeakScale)
 	{
@@ -22,12 +24,15 @@ public:
 		PeakScale = InPeakScale;
 	}
 
+	//The main mesh of the note actor
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Note|Visuals")
 	UStaticMeshComponent* NoteMesh;
-	
+
+	//If the player hits the note successfully, This material is applied to show that the action was successful
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Note|Visuals")
 	UMaterialInterface* SuccessMaterial = nullptr;
 
+	//If the player does not hit the note successfully, This material is applied to show that the action was unsuccessful
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Note|Visuals")
 	UMaterialInterface* FailureMaterial = nullptr;
 
