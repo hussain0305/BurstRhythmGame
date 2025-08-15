@@ -498,8 +498,8 @@ void AMusicZone::StopAndReset()
         if (N.Actor.IsValid())
             N.Actor->Destroy();
     }
-    ActiveNotes.Empty();
     
+    ActiveNotes.Empty();
     FullPCM.Empty();
     PromptBuffer.Empty();
     
