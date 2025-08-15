@@ -44,5 +44,9 @@ void AMusicHUD::HandleBeatScored(bool bSuccess, int32 InSuccess, int32 InFail, f
 
 void AMusicHUD::HandleChallengeEnded(bool bAbandoned, float FinalPercent)
 {
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Challenge ended notification received in C++"));
+	}
 	BP_OnChallengeEnded(bAbandoned, FinalPercent);
 }

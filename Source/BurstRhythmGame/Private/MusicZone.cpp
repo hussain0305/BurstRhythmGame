@@ -85,9 +85,10 @@ void AMusicZone::OnTriggerEnd(UPrimitiveComponent* /*OverlappedComp*/, AActor* O
 
     GetWorld()->GetTimerManager().ClearTimer(FileAskDelayHandle);
 
-    UnbindSelfFromHUD();
     
     StopAndReset();
+
+    UnbindSelfFromHUD();
 }
 
 void AMusicZone::StartZoneSession()
@@ -485,23 +486,23 @@ void AMusicZone::StopAndReset()
         AudioComp = nullptr;
     }
     ProcWave = nullptr;
-
+    
     if (AnalysisFuture.IsValid())
     {
         AnalysisFuture.Wait();
         AnalysisFuture = TFuture<void>();
     }
-
+    
     for (FActiveNote& N : ActiveNotes)
     {
         if (N.Actor.IsValid())
             N.Actor->Destroy();
     }
     ActiveNotes.Empty();
-
+    
     FullPCM.Empty();
     PromptBuffer.Empty();
-
+    
     AnalysisCursorSamples = 0;
     SongDuration  = 0.0;
     SongStartTime = 0.0;
@@ -515,8 +516,8 @@ void AMusicZone::StopAndReset()
 
 void AMusicZone::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    UnbindSelfFromHUD();
     StopAndReset();
+    UnbindSelfFromHUD();
     Super::EndPlay(EndPlayReason);
 }
 
